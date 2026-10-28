@@ -48,7 +48,7 @@ class BoundaryTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d,a.Ledger(d) as s:
             a.deliver(s,[],lambda e:None)
             seen=[]; events=[E,dict(E,id='codex-456',kind='Banked Reset')]
-            a.deliver(s,events,lambda e:seen.append(a.blocks(e)))
+            a.deliver(s,events,lambda e:seen.append(a.notification(e)))
             a.deliver(s,events,lambda e:self.fail('duplicate'))
             self.assertEqual(len(seen),2)
     def test_api_http_and_timeout_failures(self):
@@ -61,10 +61,10 @@ class BoundaryTest(unittest.TestCase):
         with patch.object(t,'build_opener') as opener:
             opener.return_value.open.side_effect=URLError('secret must not escape')
             with self.assertRaises(t.NetworkError): t.fetch_feed()
-    def test_slack_redirect_not_followed(self):
+    def test_api_redirect_not_followed(self):
         self.assertIsNone(t.NoRedirect().redirect_request(None,None,None,None,None,None))
     def test_cli_sigterm_during_poll_wait(self):
-        # Child uses production CLI loop; source read mocked, no external Slack/network.
+        # Child uses production CLI loop; source read mocked, no external delivery/network.
         with tempfile.TemporaryDirectory() as d:
             env=dict(os.environ,TEST_STATE=d,PYTHONPATH=str(ROOT))
             p=subprocess.Popen([sys.executable,str(ROOT/'tests'/'signal_child.py')],env=env,stdout=subprocess.PIPE,stderr=subprocess.PIPE)

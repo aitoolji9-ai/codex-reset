@@ -2,6 +2,7 @@
 import argparse, json, os, signal, sys, threading, logging
 from pathlib import Path
 import reset_notifier as app
+import notify
 
 log=logging.getLogger('reset-notifier')
 
@@ -12,11 +13,11 @@ def load_env(path):
         line=line.strip()
         if not line or line.startswith('#'): continue
         key,sep,value=line.partition('=')
-        if not sep or key not in ('SLACK_WEBHOOK_URL','SLACK_THREAD_TS','STATE_DIR'): raise app.Invalid('unsupported .env key')
+        if not sep or key not in ('STATE_DIR',): raise app.Invalid('unsupported .env key')
         os.environ.setdefault(key,value.strip().strip('\"\''))
 
 def main():
-    parser=argparse.ArgumentParser(description='Codex public announcements to Slack')
+    parser=argparse.ArgumentParser(description='Codex public reset announcements')
     parser.add_argument('--dry-run',action='store_true',help='read API and validate; never send or change ledger')
     parser.add_argument('--once',action='store_true')
     parser.add_argument('--snapshot',type=Path,help='offline dry-run only')
@@ -31,10 +32,9 @@ def main():
         if args.dry_run:
             data=json.loads(args.snapshot.read_text()) if args.snapshot else app.fetch_feed()
             events=app.parse_feed(data)
-            print(json.dumps({'dry_run':True,'source':'offline snapshot' if args.snapshot else app.API,'count':len(events),'events':events,'sample_message':app.blocks(events[-1]) if events else None},ensure_ascii=False,indent=2))
+            print(json.dumps({'dry_run':True,'source':'offline snapshot' if args.snapshot else app.API,'count':len(events),'events':events,'sample_message':app.notification(events[-1]) if events else None},ensure_ascii=False,indent=2))
             return 0
         load_env(args.env_file)
-        webhook=app.webhook_url(os.getenv('SLACK_WEBHOOK_URL'))
         directory=args.state_dir or Path(os.getenv('STATE_DIR','state'))
         with app.Ledger(directory) as ledger:
             failures=0
@@ -46,7 +46,7 @@ def main():
                     age=(app.datetime.now(app.timezone.utc)-checked).total_seconds()
                     if age < -300 or age > 86400: raise app.Invalid('feed stale or clock skew; check UTC clock')
                     events=app.parse_feed(data)
-                    app.deliver(ledger,events,lambda e:app.post_slack(webhook,app.blocks(e,thread_ts=os.getenv('SLACK_THREAD_TS') or None)))
+                    app.deliver(ledger,events,lambda e:notify.send(app.notification(e)))
                     delay=app.polling_policy(events, history=[r['latest'] for r in ledger.data['events'].values()])['seconds']
                     log.info('poll OK; ledger persisted; waiting %ss',delay)
                     failures=0

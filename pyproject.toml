@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "codex-reset-notifier"
-version = "1.0.0"
-description = "Public Codex announcement polling to Slack Incoming Webhook"
+version = "1.1.0"
+description = "Channel-independent Codex reset announcement monitor"
 requires-python = ">=3.9"
 dependencies = []
 
@@ -13,4 +13,4 @@ dependencies = []
 codex-reset-notifier = "cli:main"
 
 [tool.setuptools]
-py-modules = ["cli", "reset_notifier", "transport"]
+py-modules = ["cli", "reset_notifier", "transport", "notify"]

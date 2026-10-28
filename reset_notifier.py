@@ -1,7 +1,7 @@
 """Codex public reset announcements; no account quota inference."""
 import re
 from datetime import datetime, timezone, timedelta
-from transport import post_slack, webhook_url, retry_seconds, fetch_feed, NetworkError, PermanentError
+from transport import retry_seconds, fetch_feed, NetworkError, PermanentError
 
 import os, json, fcntl, tempfile, copy
 from pathlib import Path
@@ -74,7 +74,7 @@ def deliver(store, events, send):
         except Exception:
             records[event['id']]['status']='unknown'
             store.save()
-            raise Halted('webhook result not confirmed; inspect outbox, no resend') from None
+            raise Halted('delivery result not confirmed; inspect outbox, no resend') from None
         records[event['id']]['status']='sent'
         records[event['id']]['sent_at']=datetime.now(timezone.utc).isoformat()
         store.save()  # if this fails persisted sending blocks resend
@@ -148,9 +148,7 @@ def polling_policy(events, current=None, history=()):
     return normal
 
 
-def blocks(event, thread_ts=None):
-    if thread_ts is not None and not re.fullmatch(r'[0-9]+\.[0-9]{6}',thread_ts):
-        raise Invalid('invalid thread timestamp')
+def notification(event):
     scheduled = event['phase'] == 'scheduled'
     korea = timezone(timedelta(hours=9))
     try:
@@ -184,9 +182,9 @@ def blocks(event, thread_ts=None):
             lines.append('발견 시각: 미기록 · 지연 확인 필요')
     note = ('예정 안내이며, 완료가 확인되면 별도로 알립니다.' if scheduled else
             'WhenReset 완료 기록 기준 · 내 계정 적용 여부는 확인 필요')
-    text = title+'\n'+'\n'.join(lines)
-    return {**({'thread_ts':thread_ts} if thread_ts else {}), 'text':text, 'blocks':[
-        {'type':'header','text':{'type':'plain_text','text':title}},
-        {'type':'section','text':{'type':'plain_text','text':'\n'.join(lines)}},
-        {'type':'context','elements':[{'type':'plain_text','text':note}]},
-        {'type':'context','elements':[{'type':'mrkdwn','text':f"출처: <https://whenreset.dev|WhenReset> · <{source_url(event['url'])}|티보 X 원문>"}]}]}
+    sources = [{'label': 'WhenReset', 'url': 'https://whenreset.dev'},
+               {'label': '티보 X 원문', 'url': source_url(event['url'])}]
+    text = '\n'.join([title, *lines, note,
+                      '출처: ' + ' · '.join(s['label'] + ' ' + s['url'] for s in sources)])
+    return {'schema_version': 1, 'id': event['id'], 'phase': event['phase'],
+            'title': title, 'text': text, 'sources': sources, 'event': dict(event)}

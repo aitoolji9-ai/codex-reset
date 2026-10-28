@@ -1,10 +1,9 @@
 """Strict fixed-origin transport. Never include exception URLs in logs."""
-import json, re
+import json
 from datetime import datetime, timezone
 from email.utils import parsedate_to_datetime
 from urllib.request import build_opener, HTTPRedirectHandler, Request
 from urllib.error import HTTPError, URLError
-from urllib.parse import urlsplit
 
 class NetworkError(Exception):
     def __init__(self, delay=180): self.delay=delay
@@ -18,12 +17,6 @@ def retry_seconds(value):
     except (ValueError,TypeError):
         try: return max(180,int((parsedate_to_datetime(value)-datetime.now(timezone.utc)).total_seconds()))
         except (ValueError,TypeError,OverflowError): return 180
-
-def webhook_url(value):
-    from reset_notifier import Invalid
-    if not isinstance(value,str) or not re.fullmatch(r'https://hooks\.slack\.com/services/[A-Za-z0-9_-]+/[A-Za-z0-9_-]+/[A-Za-z0-9_-]+',value):
-        raise Invalid('SLACK_WEBHOOK_URL missing or invalid; configure locally')
-    return value
 
 def fetch_feed():
     from reset_notifier import API, Invalid
@@ -42,18 +35,3 @@ def fetch_feed():
         raise PermanentError('API permanent HTTP rejection') from None
     except (URLError,TimeoutError,OSError): raise NetworkError() from None
     except (ValueError,UnicodeError): raise Invalid('API invalid JSON') from None
-
-def post_slack(url,payload,*,test_local=False):
-    from reset_notifier import Invalid,Halted
-    parsed=urlsplit(url)
-    local=test_local and parsed.scheme=='http' and parsed.hostname=='127.0.0.1' and parsed.username is None and parsed.password is None
-    if not local: webhook_url(url)
-    request=Request(url,data=json.dumps(payload).encode(),headers={'Content-Type':'application/json'},method='POST')
-    try:
-        with build_opener(NoRedirect()).open(request,timeout=20) as response:
-            if response.status!=200 or response.read(4097)!=b'ok': raise Halted('Slack rejected or ambiguous response')
-    except HTTPError as error:
-        error.close()
-        raise Halted('Slack HTTP rejected; inspect outbox before retry') from None
-    except (URLError,TimeoutError,OSError):
-        raise Halted('Slack delivery unconfirmed; no automatic resend') from None
