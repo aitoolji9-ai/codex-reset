@@ -1,0 +1,22 @@
+services:
+  notifier:
+    build: .
+    env_file: .env
+    environment:
+      STATE_DIR: /state
+    volumes:
+      - reset-state:/state
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=16m
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    restart: "no"
+    stop_grace_period: 30s
+    logging:
+      driver: json-file
+      options:
+        max-size: "5m"
+        max-file: "3"
+volumes:
+  reset-state:

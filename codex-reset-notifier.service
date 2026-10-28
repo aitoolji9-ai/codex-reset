@@ -1,0 +1,21 @@
+[Unit]
+Description=Codex reset public announcement notifier (user service)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=%h/.local/share/codex-reset-notifier
+ExecStart=%h/.local/share/codex-reset-notifier/.venv/bin/python cli.py --state-dir %h/.local/state/codex-reset-notifier
+UMask=0077
+Restart=no
+TimeoutStopSec=30
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ReadWritePaths=%h/.local/state/codex-reset-notifier
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=default.target

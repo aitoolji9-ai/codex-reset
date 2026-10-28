@@ -1,0 +1,43 @@
+{
+  "source": "live",
+  "generatedAt": "2026-01-03T00:00:00Z",
+  "checkedAt": "2026-01-03T00:00:00Z",
+  "events": [
+    {
+      "id": "codex-123",
+      "provider": "codex",
+      "type": "reset",
+      "landedAt": "2026-01-01T00:00:00Z",
+      "scope": "all",
+      "sources": [
+        {
+          "role": "landed",
+          "url": "https://x.com/thsottiaux/status/123"
+        }
+      ]
+    },
+    {
+      "id": "codex-456",
+      "provider": "codex",
+      "type": "card",
+      "landedAt": "2026-01-02T00:00:00Z",
+      "scope": "all",
+      "sources": [
+        {
+          "role": "landed",
+          "url": "https://x.com/thsottiaux/status/456"
+        }
+      ]
+    }
+  ],
+  "watch": {
+    "codex": {
+      "open": true,
+      "type": "reset",
+      "postId": "789",
+      "scheduledAt": "2026-01-03T10:00:00Z",
+      "url": "https://x.com/thsottiaux/status/789",
+      "scope": "all"
+    }
+  }
+}
