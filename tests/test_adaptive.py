@@ -34,4 +34,3 @@ class AdaptiveTests(unittest.TestCase):
             with app.Ledger(Path(d)) as ledger:
                 app.deliver(ledger,[],lambda e: self.fail('missing forecast must not send'))
                 self.assertEqual(app.polling_policy([],NOW,history=[r['latest'] for r in ledger.data['events'].values()])['seconds'],300)
-
